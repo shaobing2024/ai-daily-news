@@ -100,9 +100,11 @@ def fetch_text(url):
 def _strip_tags(s):
     if not s:
         return ""
+    # 先剥 CDATA 包裹（若有），再解码 HTML 实体（部分源如 InfoQ 把整段 HTML
+    # 用 &lt; &gt; &#39; 转义后塞进 description），否则标签无法被正确剥离。
     s = re.sub(r"<!\[CDATA\[(.*?)\]\]>", r"\1", s, flags=re.S)
-    s = re.sub(r"<[^>]+>", "", s)
     s = html.unescape(s)
+    s = re.sub(r"<[^>]+>", "", s)
     s = re.sub(r"\s+", " ", s).strip()
     return s
 
