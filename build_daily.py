@@ -474,7 +474,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         <div class="logo" aria-label="小马AI 每日新闻">
           <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="32" cy="32" r="30"/>
-            <path d="M18 44V24l10 12 10-12v20"/>
+            <path d="M22 44V24l10 12 10-12v20"/>
           </svg>
         </div>
         <p class="kicker">小马AI 每日新闻 · 聚合</p>
