@@ -61,6 +61,41 @@ KW_TIPS = ["教程", "怎么", "如何", "技巧", "指南", "实战", "盘点",
 KW_PRODUCT = ["产品", "app", "应用", "工具", "功能", "上线", "公测", "内测", "插件", "助手",
               "智能体", "agent", "机器人", "设备", "手机", "软件", "平台", "服务", "小程序"]
 
+# AI 相关性硬过滤：只保留含 AI 专属词的条目。注意——这里绝不能使用上面分类用的泛词
+# （产品/应用/工具/手机/软件/平台…），否则会把手机、App 等非 AI 新闻误放行。
+# 英文词做词边界匹配，避免 agent 误中 management、ai 误中 openai 内部等。
+KW_AI = [
+    # 通用 / 概念
+    "ai", "aigc", "agi", "人工智能", "生成式", "生成式ai", "智能体", "agent", "agentic",
+    "大模型", "llm", "多模态", "基座模型", "推理模型", "开源模型", "预训练", "微调",
+    "对齐", "rlhf", "涌现", "蒸馏", "参数", "transformer", "扩散模型", "提示词", "prompt",
+    "rag", "向量", "具身", "算力", "机器学习", "深度学习", "神经网络",
+    # 模型 / 产品名
+    "gpt", "chatgpt", "claude", "gemini", "llama", "mistral", "qwen", "deepseek",
+    "kimi", "glm", "文心", "通义", "豆包", "百川", "智谱", "混元", "copilot",
+    "midjourney", "sora", "stable diffusion", "文生图", "文生视频", "数字人",
+    # 公司与芯片
+    "openai", "anthropic", "deepmind", "xai", "英伟达", "nvidia", "昇腾", "h100", "h200", "a100",
+    "百度智能云", "阿里通义", "腾讯混元", "月之暗面",
+]
+_AI_LATIN = [k for k in KW_AI if re.fullmatch(r"[A-Za-z0-9.+]+", k)]
+_AI_CJK = [k for k in KW_AI if k not in _AI_LATIN]
+_AI_PATTERNS = [r"(?<![a-z0-9])" + re.escape(k) + r"(?![a-z0-9])" for k in _AI_LATIN]
+
+
+def is_ai_related(text):
+    t = (text or "").lower()
+    for k in _AI_CJK:
+        if k in t:
+            return True
+    for p in _AI_PATTERNS:
+        if re.search(p, t):
+            return True
+    # agent 兼容复合词（如 ReActAgent），但排除 management / engagement 等非 AI 词
+    if "agent" in t and not any(b in t for b in ("management", "engagement", "embed", "percentage")):
+        return True
+    return False
+
 
 # ----------------------------------------------------------------------------
 # 网络层
@@ -223,6 +258,12 @@ def build_data():
             continue
         seen.add(key)
         unique.append(it)
+
+    # AI 相关性过滤：与 AI 无关的整条丢弃（不进任何版块）
+    before = len(unique)
+    unique = [it for it in unique if is_ai_related(it["title"] + " " + (it["summary"] or ""))]
+    if before - len(unique):
+        print(f"  AI 过滤: 丢弃 {before - len(unique)} 条非 AI 相关")
 
     groups = {s: [] for s in SECTIONS}
     for it in unique:
