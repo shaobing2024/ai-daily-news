@@ -311,7 +311,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <meta property="og:description" content="__OG_DESC__">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="小马AI 每日新闻">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232f6f8f'/><text x='16' y='22' font-size='16' font-weight='700' text-anchor='middle' fill='white'>AI</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23ffffff'/><path d='M16 5c6.075 0 11 4.925 11 11s-4.925 11-11 11S5 22.075 5 16 9.925 5 16 5z' fill='none' stroke='%231b1d1f' stroke-width='2'/><path d='M9 22V11l7 8 7-8v11' fill='none' stroke='%231b1d1f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <style>
   :root{
     --bg:#f4f5f2;
@@ -345,24 +345,60 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     background:var(--panel); color:var(--ink);
     border-bottom:1px solid var(--line);
     border-top:3px solid var(--brand);
-    padding:46px 28px 30px; margin-bottom:0;
+    padding:52px 20px 40px; margin-bottom:0;
+    text-align:center;
   }
-  .hero-inner{max-width:1120px; margin:0 auto;}
-  .kicker{font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); margin:0 0 10px; font-weight:600;}
+  .hero-inner{max-width:760px; margin:0 auto;}
+  .masthead{display:flex; flex-direction:column; align-items:center;}
+  .logo{
+    width:72px; height:72px; color:var(--ink);
+    margin-bottom:18px;
+  }
+  .logo svg{width:100%; height:100%; display:block;}
+  .kicker{
+    font-size:12px; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 10px; font-weight:600;
+  }
   .hero h1{
     margin:0; font-family:var(--serif); font-weight:700;
-    font-size:clamp(28px,4.4vw,42px); line-height:1.12; letter-spacing:.01em;
+    font-size:clamp(30px,4.8vw,44px); line-height:1.1; letter-spacing:.01em;
   }
-  .hero .sub{margin:10px 0 0; color:var(--muted); font-size:14.5px;}
-  .badge-fallback{display:inline-block; margin-left:10px; font-size:11.5px; font-weight:700;
-    background:#fdf3e7; color:#9c7b3f; border:1px solid #ecd9b8; padding:3px 10px; border-radius:999px; vertical-align:middle;}
+  .tagline{
+    margin:12px 0 0; color:var(--muted); font-size:14.5px; font-weight:400;
+  }
+  .hero-date{
+    margin:8px 0 0; font-size:12.5px; color:var(--muted); letter-spacing:.02em;
+  }
+  .badge-fallback{display:inline-block; margin-left:8px; font-size:11px; font-weight:700;
+    background:#fdf3e7; color:#9c7b3f; border:1px solid #ecd9b8; padding:2px 8px; border-radius:999px; vertical-align:middle;}
 
-  /* 报头统计条：编辑式分隔，无彩色块 */
-  .stat-row{display:flex; flex-wrap:wrap; gap:14px 34px; margin-top:26px; padding-top:20px; border-top:1px solid var(--hair);}
-  .stat{background:none; border:none; padding:0; min-width:auto; flex:0 0 auto;}
+  /* 报头统计条：居中、无彩色块 */
+  .stat-row{
+    display:flex; justify-content:center; flex-wrap:wrap;
+    gap:14px 42px; margin-top:28px; padding-top:22px;
+    border-top:1px solid var(--hair); width:100%;
+  }
+  .stat{background:none; border:none; padding:0; min-width:auto; flex:0 0 auto; text-align:center;}
   .stat .num{font-family:var(--serif); font-size:clamp(26px,3.4vw,34px); font-weight:700; line-height:1; color:var(--ink);}
   .stat .lbl{font-size:12.5px; color:var(--muted); margin-top:7px; letter-spacing:.02em;}
   .stat.total .num{font-size:clamp(30px,4vw,42px); color:var(--brand);}
+
+  .actions{
+    display:flex; justify-content:center; flex-wrap:wrap;
+    gap:10px; margin-top:28px; width:100%;
+  }
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    height:40px; padding:0 22px; border-radius:8px;
+    font-size:13.5px; font-weight:600; text-decoration:none;
+    color:var(--ink); background:var(--panel); border:1px solid var(--hair);
+    transition:.15s ease; cursor:pointer;
+  }
+  .btn:hover{border-color:var(--muted); background:#f8f9f6;}
+  .btn.primary{
+    background:var(--ink); color:var(--panel); border-color:var(--ink);
+  }
+  .btn.primary:hover{background:#333; border-color:#333;}
 
   .lead{
     background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--brand);
@@ -432,12 +468,31 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 </style>
 </head>
 <body>
-  <header class="hero">
+  <header class="hero" id="top">
     <div class="hero-inner">
-      <p class="kicker">小马AI 每日新闻 · 聚合</p>
-      <h1 id="heroDate">小马AI 每日新闻</h1>
-      <p class="sub" id="heroSub"></p>
-      <div class="stat-row" id="statRow"></div>
+      <div class="masthead">
+        <div class="logo" aria-label="小马AI 每日新闻">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="32" cy="32" r="30"/>
+            <path d="M18 44V24l10 12 10-12v20"/>
+          </svg>
+        </div>
+        <p class="kicker">小马AI 每日新闻 · 聚合</p>
+        <h1>小马AI 每日新闻</h1>
+        <p class="tagline">每 6 小时自动更新的 AI 行业快讯</p>
+        <p class="hero-date" id="heroDate"></p>
+        <div class="stat-row">
+          <div class="stat total"><div class="num" id="statTotal">0</div><div class="lbl">总条数</div></div>
+          <div class="stat"><div class="num">6h</div><div class="lbl">更新频率</div></div>
+          <div class="stat"><div class="num" id="statSec">5</div><div class="lbl">内容分类</div></div>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="#main">查看最新一期</a>
+          <a class="btn" href="#sec-1">AI工具速报</a>
+          <a class="btn" href="#footNote">RSS订阅</a>
+          <a class="btn" href="https://xiaomaw.cn" target="_blank" rel="noopener">小马的主页</a>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -496,24 +551,18 @@ function renderHero(){
   const p = dateStr.split("-");
   const Y=+p[0], M=+p[1], D=+p[2];
   const wd = WEEK[new Date(Y, M-1, D).getDay()];
-  let h = Y + " 年 " + M + " 月 " + D + " 日 · 小马AI 每日新闻";
-  if(DATA.isFallback) h += ' <span class="badge-fallback">当日未生成 · 回退最近一期</span>';
-  document.getElementById("heroDate").innerHTML = h;
-  let sub = "每" + wd.slice(1) + " · 五大版块中文 AI 资讯聚合";
-  if(DATA.generatedAt){
-    sub += " · 生成于北京时间 " + fmtBeijing(DATA.generatedAt, false);
+  const dateEl = document.getElementById("heroDate");
+  if(dateEl){
+    let txt = Y + "年" + M + "月" + D + "日 · " + wd;
+    if(DATA.generatedAt){
+      txt += " · 生成于北京时间 " + fmtBeijing(DATA.generatedAt, false);
+    }
+    if(DATA.isFallback) txt += ' <span class="badge-fallback">当日未生成 · 回退最近一期</span>';
+    dateEl.innerHTML = txt;
   }
-  document.getElementById("heroSub").textContent = sub;
-
   const total = DATA.sections.reduce(function(a,s){return a+s.items.length;},0);
-  const row = document.getElementById("statRow");
-  let html = '<div class="stat total"><div class="num">' + total + '</div><div class="lbl">总条数</div></div>';
-  DATA.sections.forEach(function(s,i){
-    html += '<div class="stat" style="border-left:4px solid ' + accentVar(i) + '">'
-      + '<div class="num">' + s.items.length + '</div>'
-      + '<div class="lbl">' + s.label + '</div></div>';
-  });
-  row.innerHTML = html;
+  document.getElementById("statTotal").textContent = total;
+  document.getElementById("statSec").textContent = DATA.sections.length;
 }
 
 function renderLead(){
