@@ -39,5 +39,7 @@ jobs:
             echo "内容无变化，跳过提交"
           else
             git commit -m "chore: 每日晨报更新 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            # 若 GitHub 在此期间往分支提交了 CNAME 等，先变基再推送，避免 non-fast-forward 失败
+            git pull --rebase origin main || git rebase origin/main
             git push
           fi

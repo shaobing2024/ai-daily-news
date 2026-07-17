@@ -5,11 +5,13 @@ build_daily.py — 一键生成 AI HOT 晨报仪表盘（单文件 HTML）
 流程：
   1. 拉取当日 AI HOT 日报（/api/public/daily）；若当日尚未生成则回退到最近一期。
   2. 用 /api/public/items 补全每条 item 的真实发布时间（按 permalink 末段 id 匹配）。
-  3. 生成 ai_daily_dashboard.html（内联 CSS/JS，无外部资源，响应式）。
+  3. 生成单文件 HTML（内联 CSS/JS，无外部资源，响应式），含导语、五大版块、
+     全局连续编号、Open Graph 分享标签与 emoji favicon。
 
 用法：
   python build_daily.py
-输出：与本脚本同目录的 ai_daily_dashboard.html
+  AI_DAILY_OUTPUT=docs/index.html python build_daily.py   # 输出到 docs/ 供 GitHub Pages
+输出：默认与本脚本同目录的 ai_daily_dashboard.html；可用 AI_DAILY_OUTPUT 覆盖。
 """
 import json
 import io
@@ -124,7 +126,13 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 晨报仪表盘</title>
+<title>__OG_TITLE__</title>
+<meta name="description" content="__OG_DESC__">
+<meta property="og:title" content="__OG_TITLE__">
+<meta property="og:description" content="__OG_DESC__">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AI HOT 晨报">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232f6df6'/><text x='16' y='22' font-size='16' font-weight='700' text-anchor='middle' fill='white'>AI</text></svg>">
 <style>
   :root{
     --bg:#f5f7fb; --panel:#ffffff; --ink:#1f2733; --muted:#6b7686;
@@ -159,6 +167,13 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .stat .num{font-size:26px; font-weight:800; line-height:1;}
   .stat .lbl{font-size:12.5px; opacity:.9; margin-top:6px;}
   .stat.total .num{font-size:34px;}
+
+  .lead{
+    background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--c2);
+    border-radius:14px; padding:16px 18px; margin:18px 0 0; box-shadow:var(--shadow);
+    font-size:15px; color:#33405a; line-height:1.7;
+  }
+  .lead .lead-tag{display:block; font-size:12px; font-weight:700; color:var(--c2); letter-spacing:.08em; margin-bottom:6px;}
 
   .nav{
     position:sticky; top:0; z-index:20; background:rgba(255,255,255,.9);
@@ -229,6 +244,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   </header>
 
   <div class="wrap">
+    <div class="lead" id="leadBox"></div>
     <nav class="nav" id="nav"></nav>
     <main id="main"></main>
     <div class="foot-note" id="footNote"></div>
@@ -240,20 +256,32 @@ const DATA = __DATA__;
 const ACCENTS = ["--c1","--c2","--c3","--c4","--c5"];
 function accentVar(i){ return "var(" + ACCENTS[i % ACCENTS.length] + ")"; }
 
-function fmtBeijing(iso){
+// 完整 HTML 转义（文本内容与属性通用）
+function esc(s){
+  return (s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// 北京时间人话格式；默认相对“报告日期”(DATA.date) 计算 今天/昨天
+function fmtBeijing(iso, withDay){
   if(!iso) return "时间未公布";
   const d = new Date(iso);
   if(isNaN(d.getTime())) return "时间未公布";
   const bj = new Date(d.getTime() + 8*3600*1000);
   const Y=bj.getUTCFullYear(), M=bj.getUTCMonth()+1, D=bj.getUTCDate();
   const h=bj.getUTCHours(), m=String(bj.getUTCMinutes()).padStart(2,'0');
-  const now = new Date();
-  const nowBJ = new Date(now.getTime()+8*3600*1000);
-  const dayDiff = Math.floor((Date.UTC(nowBJ.getUTCFullYear(),nowBJ.getUTCMonth(),nowBJ.getUTCDate())
-                - Date.UTC(Y,M-1,D))/86400000);
+  if(withDay===false) return h+":"+m;
+  const p=(DATA.date||"").split("-");
+  const rY=+p[0], rM=+p[1], rD=+p[2];
+  const dayDiff=Math.round((Date.UTC(Y,M-1,D)-Date.UTC(rY,rM-1,rD))/86400000);
   let prefix;
   if(dayDiff===0) prefix="今天";
   else if(dayDiff===1) prefix="昨天";
+  else if(dayDiff===-1) prefix="明天";
   else prefix=(M+"月"+D+"日");
   return prefix+" "+h+":"+m;
 }
@@ -275,7 +303,7 @@ function renderHero(){
   document.getElementById("heroDate").innerHTML = h;
   let sub = "每" + wd.slice(1) + " · 五大版块全球 AI 动态精选";
   if(DATA.generatedAt){
-    sub += " · 报告生成于北京时间 " + fmtBeijing(DATA.generatedAt);
+    sub += " · 报告生成于北京时间 " + fmtBeijing(DATA.generatedAt, false);
   }
   document.getElementById("heroSub").textContent = sub;
 
@@ -290,6 +318,12 @@ function renderHero(){
   row.innerHTML = html;
 }
 
+function renderLead(){
+  const box = document.getElementById("leadBox");
+  if(!DATA.lead){ box.parentNode.removeChild(box); return; }
+  box.innerHTML = '<span class="lead-tag">今日导语</span>' + esc(DATA.lead);
+}
+
 function renderNav(){
   const nav = document.getElementById("nav");
   let html = '<a href="#top"><span class="dot" style="background:#94a3b8"></span>顶部</a>';
@@ -301,8 +335,6 @@ function renderNav(){
 }
 
 const CLOCK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
-
-function esc(s){ return (s||"").replace(/"/g,'&quot;'); }
 
 function renderCards(){
   const main = document.getElementById("main");
@@ -323,13 +355,13 @@ function renderCards(){
       html += '<article class="card" style="--accent:' + accent + '">'
         + '<div class="top">'
         + '<span class="badge">' + counter + '</span>'
-        + '<span class="chip" title="' + esc(src) + '">' + src + '</span>'
+        + '<span class="chip" title="' + esc(src) + '">' + esc(src) + '</span>'
         + '</div>'
-        + '<h3><a href="' + url + '" target="_blank" rel="noopener noreferrer">' + it.title + '</a></h3>'
-        + '<p class="summary" title="' + esc(it.summary) + '">' + sum + '</p>'
+        + '<h3><a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + esc(it.title) + '</a></h3>'
+        + '<p class="summary" title="' + esc(it.summary) + '">' + esc(sum) + '</p>'
         + '<div class="foot">'
         + '<span class="time">' + CLOCK + time + '</span>'
-        + '<a class="link" href="' + url + '" target="_blank" rel="noopener noreferrer">阅读原文 →</a>'
+        + '<a class="link" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">阅读原文 →</a>'
         + '</div>'
         + '</article>';
     });
@@ -342,10 +374,10 @@ function renderFoot(){
   const total = DATA.sections.reduce(function(a,s){return a+s.items.length;},0);
   let srcHtml;
   if(DATA.attribution && DATA.attribution.canonical){
-    srcHtml = '<a href="' + DATA.attribution.canonical + '" target="_blank" rel="noopener noreferrer">'
-      + (DATA.attribution.source || 'AI HOT') + '</a>';
+    srcHtml = '<a href="' + esc(DATA.attribution.canonical) + '" target="_blank" rel="noopener noreferrer">'
+      + esc(DATA.attribution.source || 'AI HOT') + '</a>';
   } else {
-    srcHtml = (DATA.attribution && DATA.attribution.source) ? DATA.attribution.source : 'AI HOT';
+    srcHtml = esc((DATA.attribution && DATA.attribution.source) ? DATA.attribution.source : 'AI HOT');
   }
   document.getElementById("footNote").innerHTML =
     '本日报共 <strong>' + total + '</strong> 条 · 数据来源：' + srcHtml + '（aihot.virxact.com）<br>'
@@ -353,6 +385,7 @@ function renderFoot(){
 }
 
 renderHero();
+renderLead();
 renderNav();
 renderCards();
 renderFoot();
@@ -379,21 +412,37 @@ def build_data(daily, pub, is_fallback):
         "date": daily.get("date"),
         "generatedAt": daily.get("generatedAt"),
         "attribution": daily.get("attribution", {}),
+        "lead": daily.get("lead", "") or "",
         "isFallback": is_fallback,
         "sections": sections,
     }
+
+
+def esc_attr(s):
+    """Python 侧转义，用于注入 <title>/<meta> 等属性值。"""
+    return (s or "").replace("&", "&amp;").replace("<", "&lt;") \
+        .replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#39;")
 
 
 def main():
     daily, date_str, is_fallback = get_daily()
     pub = enrich(daily)
     data = build_data(daily, pub, is_fallback)
+
     html = HTML_TEMPLATE.replace("__DATA__", json.dumps(data, ensure_ascii=False))
+
+    # Open Graph / 描述：注入与当日相关的内容，供爬虫与社交分享预览
+    og_title = "AI 晨报 · " + date_str
+    og_desc = (data.get("lead") or
+               "每日自动生成的 AI 资讯晨报：模型发布/更新、产品发布/更新、行业动态、论文研究、技巧与观点，全球 AI 动态精选。").strip()
+    html = html.replace("__OG_TITLE__", esc_attr(og_title)).replace("__OG_DESC__", esc_attr(og_desc))
+
     os.makedirs(os.path.dirname(OUT_HTML) or ".", exist_ok=True)
     with io.open(OUT_HTML, "w", encoding="utf-8") as f:
         f.write(html)
+
     total = sum(len(s["items"]) for s in data["sections"])
-    print(f"OK  日期={date_str}  回退={is_fallback}  版块={len(data['sections'])}  总条数={total}")
+    print(f"OK  日期={date_str}  回退={is_fallback}  版块={len(data['sections'])}  总条数={total}  lead={'有' if data['lead'] else '无'}")
     print(f"输出: {OUT_HTML}")
     missing = [item_id(it) for s in daily.get("sections", []) for it in s.get("items", []) if not pub.get(item_id(it))]
     if missing:
