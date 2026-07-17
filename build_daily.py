@@ -268,7 +268,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <meta property="og:title" content="__OG_TITLE__">
 <meta property="og:description" content="__OG_DESC__">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="AI 每日新闻">
+<meta property="og:site_name" content="小马AI 每日新闻">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232f6df6'/><text x='16' y='22' font-size='16' font-weight='700' text-anchor='middle' fill='white'>AI</text></svg>">
 <style>
   :root{
@@ -373,8 +373,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <body>
   <header class="hero">
     <div class="hero-inner">
-      <p class="kicker">AI 每日新闻 · 聚合</p>
-      <h1 id="heroDate">AI 每日新闻</h1>
+      <p class="kicker">小马AI 每日新闻 · 聚合</p>
+      <h1 id="heroDate">小马AI 每日新闻</h1>
       <p class="sub" id="heroSub"></p>
       <div class="stat-row" id="statRow"></div>
     </div>
@@ -435,7 +435,7 @@ function renderHero(){
   const p = dateStr.split("-");
   const Y=+p[0], M=+p[1], D=+p[2];
   const wd = WEEK[new Date(Y, M-1, D).getDay()];
-  let h = Y + " 年 " + M + " 月 " + D + " 日 · AI 每日新闻";
+  let h = Y + " 年 " + M + " 月 " + D + " 日 · 小马AI 每日新闻";
   if(DATA.isFallback) h += ' <span class="badge-fallback">当日未生成 · 回退最近一期</span>';
   document.getElementById("heroDate").innerHTML = h;
   let sub = "每" + wd.slice(1) + " · 五大版块中文 AI 资讯聚合";
@@ -527,7 +527,7 @@ renderFoot();
 </html>
 """
 
-HEAD_TAG = "AI 每日新闻"
+HEAD_TAG = "小马AI 每日新闻"
 
 
 def esc_attr(s):
