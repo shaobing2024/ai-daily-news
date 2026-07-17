@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-build_daily.py — 一键生成 AI HOT 晨报仪表盘（单文件 HTML）
+build_daily.py — 一键生成「中文 AI 新闻聚合」晨报仪表盘（单文件 HTML）
 
 流程：
-  1. 拉取当日 AI HOT 日报（/api/public/daily）；若当日尚未生成则回退到最近一期。
-  2. 用 /api/public/items 补全每条 item 的真实发布时间（按 permalink 末段 id 匹配）。
-  3. 生成单文件 HTML（内联 CSS/JS，无外部资源，响应式），含导语、五大版块、
-     全局连续编号、Open Graph 分享标签与 emoji favicon。
+  1. 抓取多个中文科技/AI 媒体 RSS（构建时拉取，烘焙成静态 HTML）。
+  2. 解析每条：标题、原文链接、发布时间（转北京时间）、摘要（若有）。
+  3. 按关键词 + 来源规则归入五大固定版块（模型/产品/行业/论文/观点）。
+  4. 跨源去重，版块内按时间倒序，全局连续编号。
+  5. 生成单文件 HTML（内联 CSS/JS，无外部资源，响应式）：含 Hero 统计、
+     锚点导航、响应式卡片网格、Open Graph 分享标签与 emoji favicon。
 
+数据源（偏 AI 的 4 个，实测可用）：量子位 / 36氪 / InfoQ 中文 / 爱范儿。
 用法：
   python build_daily.py
   AI_DAILY_OUTPUT=docs/index.html python build_daily.py   # 输出到 docs/ 供 GitHub Pages
@@ -16,106 +19,238 @@ build_daily.py — 一键生成 AI HOT 晨报仪表盘（单文件 HTML）
 import json
 import io
 import os
+import re
+import gzip
+import time
+import html
+import ssl
+import email.utils
 import datetime
 import urllib.request
+import urllib.error
 import urllib.parse
 
-BASE_API = "https://aihot.virxact.com"
-UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
 HERE = os.path.dirname(os.path.abspath(__file__))
-# 输出路径可用环境变量 AI_DAILY_OUTPUT 覆盖（用于 GitHub Pages 的 docs/index.html）
 _out = os.environ.get("AI_DAILY_OUTPUT")
 if _out:
     OUT_HTML = _out if os.path.isabs(_out) else os.path.join(HERE, _out)
 else:
     OUT_HTML = os.path.join(HERE, "ai_daily_dashboard.html")
 
+# 偏 AI 的 4 个中文源（2026-07-18 实测 HTTP 200 + 可解析）
+SOURCES = [
+    ("量子位", "https://www.qbitai.com/feed"),
+    ("36氪", "https://36kr.com/feed"),
+    ("InfoQ 中文", "https://www.infoq.cn/feed"),
+    ("爱范儿", "https://www.ifanr.com/feed"),
+]
+
+# 五大固定版块（顺序即展示顺序，亦为全局编号顺序）
+SECTIONS = ["模型发布/更新", "产品发布/更新", "行业动态", "论文研究", "技巧与观点"]
+
+# 关键词分类（命中即归入对应版块；都不中 → 行业动态）
+KW_MODEL = ["模型", "大模型", "llm", "gpt", "开源", "训练", "参数", "预训练", "微调",
+            "蒸馏", "多模态", "基座", "推理模型", "agent模型", "基座模型", "涌现"]
+KW_PAPER = ["论文", "研究", "arxiv", "期刊", "实验", "算法", "基准", "评测", "数据集",
+            "nature", "science", "icml", "neurips", "iclr", "综述", "突破", "基准测试"]
+KW_TIPS = ["教程", "怎么", "如何", "技巧", "指南", "实战", "盘点", "观点", "思考", "建议",
+           "经验", "解读", "一文", "速通", "入门", "为什么", "怎么看", "干货", "方法", "聊聊"]
+KW_PRODUCT = ["产品", "app", "应用", "工具", "功能", "上线", "公测", "内测", "插件", "助手",
+              "智能体", "agent", "机器人", "设备", "手机", "软件", "平台", "服务", "小程序"]
+
 
 # ----------------------------------------------------------------------------
 # 网络层
 # ----------------------------------------------------------------------------
-def fetch_json(url, params=None):
-    if params:
-        url = url + "?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
+def fetch_text(url):
+    # 显式声明不压缩，避免 urllib 不自动解 gzip/br 导致拿到乱码
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Encoding": "identity"})
+    ctx = ssl.create_default_context()
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.loads(r.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return None
-        raise
+        with urllib.request.urlopen(req, timeout=25, context=ctx) as r:
+            raw = r.read()
+            charset = r.headers.get_content_charset()
+            encoding = r.headers.get("Content-Encoding", "")
+    except urllib.error.URLError as e:
+        # Windows schannel 偶发证书吊销检查失败，退化为不校验（仅抓取公开 RSS）
+        if isinstance(getattr(e, "reason", None), ssl.SSLError):
+            ctx2 = ssl._create_unverified_context()
+            with urllib.request.urlopen(req, timeout=25, context=ctx2) as r:
+                raw = r.read()
+                charset = r.headers.get_content_charset()
+                encoding = r.headers.get("Content-Encoding", "")
+        else:
+            raise
+    if "gzip" in encoding.lower():
+        raw = gzip.decompress(raw)
+    for enc in [charset, "utf-8", "gbk", "gb18030"]:
+        if enc:
+            try:
+                return raw.decode(enc)
+            except Exception:
+                pass
+    return raw.decode("utf-8", "replace")
 
 
-def get_daily():
-    """返回 (daily_obj, date_str, is_fallback)。"""
-    d = fetch_json(f"{BASE_API}/api/public/daily")
-    if d and d.get("date"):
-        return d, d["date"], False
-    # 回退到最近一期
-    arch = fetch_json(f"{BASE_API}/api/public/dailies", {"take": 1})
-    if arch and arch.get("items"):
-        date = arch["items"][0]["date"]
-        d = fetch_json(f"{BASE_API}/api/public/daily/{date}")
-        if d:
-            return d, date, True
-    raise RuntimeError("无法获取任何一期日报")
+# ----------------------------------------------------------------------------
+# RSS 解析
+# ----------------------------------------------------------------------------
+def _strip_tags(s):
+    if not s:
+        return ""
+    s = re.sub(r"<!\[CDATA\[(.*?)\]\]>", r"\1", s, flags=re.S)
+    s = re.sub(r"<[^>]+>", "", s)
+    s = html.unescape(s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 
 
-def item_id(it):
-    return it.get("permalink", "").rsplit("/", 1)[-1]
+def _field(block, tags):
+    for t in tags:
+        m = re.search(rf"<{t}\b[^>]*>(.*?)</{t}>", block, re.S | re.I)
+        if m:
+            v = _strip_tags(m.group(1))
+            if v:
+                return v
+    return ""
 
 
-def enrich(daily):
-    """为日报每条 item 补全 publishedAt（北京时间来源）。"""
-    sections = daily.get("sections", [])
-    need = {item_id(it) for s in sections for it in s.get("items", [])}
-    pub = {}
+def _link_of(block):
+    # Atom: <link href="..." rel="alternate">
+    for l in re.findall(r"<link\b[^>]*>", block, re.I):
+        href = re.search(r'href="([^"]+)"', l)
+        rel = re.search(r'rel="([^"]+)"', l)
+        if href and (not rel or "alternate" in rel.group(1) or "self" not in rel.group(1)):
+            return href.group(1)
+    # RSS: <link>url</link>
+    m = re.search(r"<link[^>]*>([^<]+)</link>", block, re.I)
+    if m and m.group(1).strip():
+        return m.group(1).strip()
+    # guid
+    g = _field(block, ["guid"])
+    if g:
+        return g
+    return ""
 
-    # 以日报窗口起点往前 3 天作为 since，覆盖可能早于窗口的条目
-    ws = daily.get("windowStart")
-    if ws:
-        dt = datetime.datetime.fromisoformat(ws.replace("Z", "+00:00"))
-        since = (dt - datetime.timedelta(days=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    else:
-        since = (datetime.datetime.utcnow() - datetime.timedelta(days=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    cursor = None
-    pages = 0
-    while pages < 15 and (need - set(pub)):
-        pages += 1
-        params = {"mode": "all", "since": since, "take": 100}
-        if cursor:
-            params["cursor"] = cursor
-        data = fetch_json(f"{BASE_API}/api/public/items", params)
-        if not data:
-            break
-        for it in data.get("items", []):
-            iid = it.get("id")
-            if iid in need and iid not in pub:
-                pub[iid] = it.get("publishedAt")
-        cursor = data.get("nextCursor")
-        if not cursor:
-            break
+def _parse_date(s):
+    if not s:
+        return None
+    s = s.strip()
+    try:
+        dt = email.utils.parsedate_to_datetime(s)
+        if dt:
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=datetime.timezone.utc)
+            return dt.astimezone(datetime.timezone.utc).isoformat()
+    except Exception:
+        pass
+    try:
+        dt = datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
+        return dt.astimezone(datetime.timezone.utc).isoformat()
+    except Exception:
+        return None
 
-    # 仍缺失的条目：用标题关键词兜底搜索
-    missing = list(need - set(pub))
-    title_of = {}
-    for s in sections:
-        for it in s.get("items", []):
-            title_of[item_id(it)] = it.get("title", "")
-    for iid in missing:
-        kw = (title_of.get(iid) or "")[:18]
-        if not kw:
+
+def parse_feed(source, text):
+    items = []
+    for block in re.findall(r"<item[ >].*?</item>|<entry[ >].*?</entry>", text, re.S | re.I):
+        title = _field(block, ["title"])
+        link = _link_of(block)
+        if not title or not link:
             continue
-        data = fetch_json(f"{BASE_API}/api/public/items", {"q": kw, "take": 10})
-        if not data:
+        desc = _field(block, ["description", "content:encoded", "summary", "content"]) or None
+        pub = _parse_date(_field(block, ["pubDate", "published", "updated", "dc:date"]))
+        items.append({
+            "title": title,
+            "link": link,
+            "summary": desc,            # 可能为 None（量子位/InfoQ/少数派 无 description）
+            "publishedAt": pub,
+            "source": source,
+        })
+    return items
+
+
+# ----------------------------------------------------------------------------
+# 分类 + 去重 + 分组
+# ----------------------------------------------------------------------------
+def classify(text):
+    t = (text or "").lower()
+    if any(k in t for k in KW_MODEL):
+        return "模型发布/更新"
+    if any(k in t for k in KW_PAPER):
+        return "论文研究"
+    if any(k in t for k in KW_TIPS):
+        return "技巧与观点"
+    if any(k in t for k in KW_PRODUCT):
+        return "产品发布/更新"
+    return "行业动态"
+
+
+def build_data():
+    all_items = []
+    for idx, (name, url) in enumerate(SOURCES):
+        if idx > 0:
+            time.sleep(1.5)  # 源间节流，避免被 RSS 服务端限流导致响应被截断
+        text = None
+        last_err = None
+        for attempt in range(2):  # 一次重试，规避偶发网络抖动
+            try:
+                text = fetch_text(url)
+                break
+            except Exception as e:
+                last_err = e
+        if not text:
+            print(f"  [跳过] {name} 抓取失败: {last_err}")
             continue
-        for it in data.get("items", []):
-            if it.get("id") == iid:
-                pub[iid] = it.get("publishedAt")
-    return pub
+        try:
+            its = parse_feed(name, text)
+            all_items.extend(its)
+            print(f"  抓取 {name}: {len(its)} 条")
+        except Exception as e:
+            print(f"  [跳过] {name} 解析失败: {e}")
+
+    # 跨源去重（按标题归一化）
+    seen, unique = set(), []
+    for it in all_items:
+        key = re.sub(r"[\s\W_]+", "", it["title"]).lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        unique.append(it)
+
+    groups = {s: [] for s in SECTIONS}
+    for it in unique:
+        sec = classify(it["title"] + " " + (it["summary"] or ""))
+        groups[sec].append(it)
+    # 版块内按发布时间倒序（无时间排最后）
+    for s in groups:
+        groups[s].sort(key=lambda x: x["publishedAt"] or "", reverse=True)
+
+    sections = []
+    for s in SECTIONS:
+        items = [{
+            "title": it["title"],
+            "summary": it["summary"] or "",
+            "sourceName": it["source"],
+            "sourceUrl": it["link"],
+            "publishedAt": it["publishedAt"],
+        } for it in groups[s]]
+        sections.append({"label": s, "items": items})
+
+    bj_now = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=8)
+    data = {
+        "date": bj_now.strftime("%Y-%m-%d"),
+        "generatedAt": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "attribution": {"source": "中文科技媒体 RSS 聚合"},
+        "sourceList": [n for n, _ in SOURCES],
+        "lead": "",
+        "isFallback": False,
+        "sections": sections,
+    }
+    return data
 
 
 # ----------------------------------------------------------------------------
@@ -131,7 +266,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <meta property="og:title" content="__OG_TITLE__">
 <meta property="og:description" content="__OG_DESC__">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="AI HOT 晨报">
+<meta property="og:site_name" content="AI 每日新闻">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232f6df6'/><text x='16' y='22' font-size='16' font-weight='700' text-anchor='middle' fill='white'>AI</text></svg>">
 <style>
   :root{
@@ -236,8 +371,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <body>
   <header class="hero">
     <div class="hero-inner">
-      <p class="kicker">AI HOT · 晨报仪表盘</p>
-      <h1 id="heroDate">AI 晨报</h1>
+      <p class="kicker">AI 每日新闻 · 聚合</p>
+      <h1 id="heroDate">AI 每日新闻</h1>
       <p class="sub" id="heroSub"></p>
       <div class="stat-row" id="statRow"></div>
     </div>
@@ -298,18 +433,18 @@ function renderHero(){
   const p = dateStr.split("-");
   const Y=+p[0], M=+p[1], D=+p[2];
   const wd = WEEK[new Date(Y, M-1, D).getDay()];
-  let h = Y + " 年 " + M + " 月 " + D + " 日 · AI 晨报";
+  let h = Y + " 年 " + M + " 月 " + D + " 日 · AI 每日新闻";
   if(DATA.isFallback) h += ' <span class="badge-fallback">当日未生成 · 回退最近一期</span>';
   document.getElementById("heroDate").innerHTML = h;
-  let sub = "每" + wd.slice(1) + " · 五大版块全球 AI 动态精选";
+  let sub = "每" + wd.slice(1) + " · 五大版块中文 AI 资讯聚合";
   if(DATA.generatedAt){
-    sub += " · 报告生成于北京时间 " + fmtBeijing(DATA.generatedAt, false);
+    sub += " · 生成于北京时间 " + fmtBeijing(DATA.generatedAt, false);
   }
   document.getElementById("heroSub").textContent = sub;
 
   const total = DATA.sections.reduce(function(a,s){return a+s.items.length;},0);
   const row = document.getElementById("statRow");
-  let html = '<div class="stat total"><div class="num">' + total + '</div><div class="lbl">今日总条数</div></div>';
+  let html = '<div class="stat total"><div class="num">' + total + '</div><div class="lbl">总条数</div></div>';
   DATA.sections.forEach(function(s,i){
     html += '<div class="stat" style="border-left:4px solid ' + accentVar(i) + '">'
       + '<div class="num">' + s.items.length + '</div>'
@@ -348,17 +483,19 @@ function renderCards(){
       + '<div class="grid">';
     s.items.forEach(function(it){
       counter++;
-      const sum = clip(it.summary, 60);
       const url = it.sourceUrl || "#";
       const src = it.sourceName || "来源";
       const time = fmtBeijing(it.publishedAt);
+      const sumHtml = it.summary
+        ? '<p class="summary" title="' + esc(it.summary) + '">' + esc(clip(it.summary, 60)) + '</p>'
+        : '';
       html += '<article class="card" style="--accent:' + accent + '">'
         + '<div class="top">'
         + '<span class="badge">' + counter + '</span>'
         + '<span class="chip" title="' + esc(src) + '">' + esc(src) + '</span>'
         + '</div>'
         + '<h3><a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + esc(it.title) + '</a></h3>'
-        + '<p class="summary" title="' + esc(it.summary) + '">' + esc(sum) + '</p>'
+        + sumHtml
         + '<div class="foot">'
         + '<span class="time">' + CLOCK + time + '</span>'
         + '<a class="link" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">阅读原文 →</a>'
@@ -372,15 +509,9 @@ function renderCards(){
 
 function renderFoot(){
   const total = DATA.sections.reduce(function(a,s){return a+s.items.length;},0);
-  let srcHtml;
-  if(DATA.attribution && DATA.attribution.canonical){
-    srcHtml = '<a href="' + esc(DATA.attribution.canonical) + '" target="_blank" rel="noopener noreferrer">'
-      + esc(DATA.attribution.source || 'AI HOT') + '</a>';
-  } else {
-    srcHtml = esc((DATA.attribution && DATA.attribution.source) ? DATA.attribution.source : 'AI HOT');
-  }
+  const sl = (DATA.sourceList || []).map(function(s){return esc(s);}).join("、");
   document.getElementById("footNote").innerHTML =
-    '本日报共 <strong>' + total + '</strong> 条 · 数据来源：' + srcHtml + '（aihot.virxact.com）<br>'
+    '本页共 <strong>' + total + '</strong> 条 · 数据来源：' + (sl || "中文科技媒体 RSS") + '<br>'
     + '时间均以北京时间展示，点击卡片标题或「阅读原文」跳转原出处。';
 }
 
@@ -394,47 +525,21 @@ renderFoot();
 </html>
 """
 
-
-def build_data(daily, pub, is_fallback):
-    sections = []
-    for s in daily.get("sections", []):
-        items = []
-        for it in s.get("items", []):
-            items.append({
-                "title": it.get("title", ""),
-                "summary": it.get("summary", "") or "",
-                "sourceName": it.get("sourceName", ""),
-                "sourceUrl": it.get("sourceUrl", ""),
-                "publishedAt": pub.get(item_id(it)),
-            })
-        sections.append({"label": s.get("label", ""), "items": items})
-    return {
-        "date": daily.get("date"),
-        "generatedAt": daily.get("generatedAt"),
-        "attribution": daily.get("attribution", {}),
-        "lead": daily.get("lead", "") or "",
-        "isFallback": is_fallback,
-        "sections": sections,
-    }
+HEAD_TAG = "AI 每日新闻"
 
 
 def esc_attr(s):
-    """Python 侧转义，用于注入 <title>/<meta> 等属性值。"""
     return (s or "").replace("&", "&amp;").replace("<", "&lt;") \
         .replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#39;")
 
 
 def main():
-    daily, date_str, is_fallback = get_daily()
-    pub = enrich(daily)
-    data = build_data(daily, pub, is_fallback)
-
+    print("抓取中文科技媒体 RSS ...")
+    data = build_data()
     html = HTML_TEMPLATE.replace("__DATA__", json.dumps(data, ensure_ascii=False))
 
-    # Open Graph / 描述：注入与当日相关的内容，供爬虫与社交分享预览
-    og_title = "AI 晨报 · " + date_str
-    og_desc = (data.get("lead") or
-               "每日自动生成的 AI 资讯晨报：模型发布/更新、产品发布/更新、行业动态、论文研究、技巧与观点，全球 AI 动态精选。").strip()
+    og_title = HEAD_TAG + " · " + data["date"]
+    og_desc = "中文 AI 资讯每日聚合：模型发布/更新、产品发布/更新、行业动态、论文研究、技巧与观点，来自量子位、36氪、InfoQ、爱范儿等。"
     html = html.replace("__OG_TITLE__", esc_attr(og_title)).replace("__OG_DESC__", esc_attr(og_desc))
 
     os.makedirs(os.path.dirname(OUT_HTML) or ".", exist_ok=True)
@@ -442,11 +547,9 @@ def main():
         f.write(html)
 
     total = sum(len(s["items"]) for s in data["sections"])
-    print(f"OK  日期={date_str}  回退={is_fallback}  版块={len(data['sections'])}  总条数={total}  lead={'有' if data['lead'] else '无'}")
+    print(f"OK  日期={data['date']}  版块={len(data['sections'])}  总条数={total}")
+    print("  各版块:", {s["label"]: len(s["items"]) for s in data["sections"]})
     print(f"输出: {OUT_HTML}")
-    missing = [item_id(it) for s in daily.get("sections", []) for it in s.get("items", []) if not pub.get(item_id(it))]
-    if missing:
-        print(f"注意: {len(missing)} 条未能补全发布时间（将显示“时间未公布”）")
 
 
 if __name__ == "__main__":
