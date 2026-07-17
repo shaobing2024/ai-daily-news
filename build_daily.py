@@ -477,7 +477,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             <path d="M22 44V24l10 12 10-12v20"/>
           </svg>
         </div>
-        <p class="kicker">小马AI 每日新闻 · 聚合</p>
+        <p class="kicker">AI 每日新闻 · 聚合</p>
         <h1>小马AI 每日新闻</h1>
         <p class="tagline">每 6 小时自动更新的 AI 行业快讯</p>
         <p class="hero-date" id="heroDate"></p>
