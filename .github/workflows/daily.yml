@@ -1,0 +1,43 @@
+name: AI 晨报每日更新
+
+on:
+  schedule:
+    # 北京时间 09:00 = UTC 01:00（GitHub Actions 的 cron 使用 UTC）
+    - cron: "0 1 * * *"
+  workflow_dispatch: {}   # 允许在 Actions 页面手动触发
+
+# 允许工作流把生成的 HTML 提交回仓库
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 生成当日晨报
+        env:
+          AI_DAILY_OUTPUT: docs/index.html   # 输出到 docs/ 供 GitHub Pages 发布
+        run: python build_daily.py
+
+      - name: 提交更新
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          if git diff --cached --quiet; then
+            echo "内容无变化，跳过提交"
+          else
+            git commit -m "chore: 每日晨报更新 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi

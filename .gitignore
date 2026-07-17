@@ -1,0 +1,9 @@
+# 项目本地记忆与缓存（不进入仓库）
+.workbuddy/
+__pycache__/
+*.pyc
+
+# 抓取过程临时文件
+aihot_*.json
+_*.json
+_page*.json
