@@ -10,7 +10,7 @@ build_daily.py — 一键生成「中文 AI 新闻聚合」晨报仪表盘（单
   5. 生成单文件 HTML（内联 CSS/JS，无外部资源，响应式）：含 Hero 统计、
      锚点导航、响应式卡片网格、Open Graph 分享标签与 emoji favicon。
 
-数据源（偏 AI 的 5 个，实测可用）：量子位 / 36氪 / InfoQ 中文 / 爱范儿 / 开源中国。
+数据源（偏 AI 的 5 个，实测可用）：量子位 / IT之家 / InfoQ 中文 / 爱范儿 / 开源中国。
 用法：
   python build_daily.py
   AI_DAILY_OUTPUT=docs/index.html python build_daily.py   # 输出到 docs/ 供 GitHub Pages
@@ -42,7 +42,7 @@ else:
 # 偏 AI 的 5 个中文源（2026-07-18 实测 HTTP 200 + 可解析）
 SOURCES = [
     ("量子位", "https://www.qbitai.com/feed"),
-    ("36氪", "https://36kr.com/feed"),
+    ("IT之家", "https://www.ithome.com/rss/"),
     ("InfoQ 中文", "https://www.infoq.cn/feed"),
     ("爱范儿", "https://www.ifanr.com/feed"),
     ("开源中国", "https://www.oschina.net/news/rss"),
@@ -651,7 +651,7 @@ def main():
     html = HTML_TEMPLATE.replace("__DATA__", json.dumps(data, ensure_ascii=False))
 
     og_title = HEAD_TAG + " · " + data["date"]
-    og_desc = "中文 AI 资讯每日聚合：模型发布/更新、产品发布/更新、行业动态、论文研究、技巧与观点，来自量子位、36氪、InfoQ、爱范儿等。"
+    og_desc = "中文 AI 资讯每日聚合：模型发布/更新、产品发布/更新、行业动态、论文研究、技巧与观点，来自量子位、IT之家、InfoQ、爱范儿等。"
     html = html.replace("__OG_TITLE__", esc_attr(og_title)).replace("__OG_DESC__", esc_attr(og_desc))
 
     os.makedirs(os.path.dirname(OUT_HTML) or ".", exist_ok=True)
