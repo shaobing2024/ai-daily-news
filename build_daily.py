@@ -83,6 +83,11 @@ _AI_CJK = [k for k in KW_AI if k not in _AI_LATIN]
 _AI_PATTERNS = [r"(?<![a-z0-9])" + re.escape(k) + r"(?![a-z0-9])" for k in _AI_LATIN]
 
 
+# 标题排除：特定聚合/栏目类文章（整条丢弃，不进版块）。
+# 如 IT之家的「IT早报」每日汇总，内容杂、非单条新闻，故不收录。
+TITLE_EXCLUDE = ["IT早报"]
+
+
 def is_ai_related(text):
     t = (text or "").lower()
     for k in _AI_CJK:
@@ -264,6 +269,12 @@ def build_data():
     unique = [it for it in unique if is_ai_related(it["title"] + " " + (it["summary"] or ""))]
     if before - len(unique):
         print(f"  AI 过滤: 丢弃 {before - len(unique)} 条非 AI 相关")
+
+    # 标题排除：丢弃特定聚合/栏目类文章（如 IT之家的「IT早报」每日汇总，内容杂且不单列）
+    before = len(unique)
+    unique = [it for it in unique if not any(x in it["title"] for x in TITLE_EXCLUDE)]
+    if before - len(unique):
+        print(f"  标题排除: 丢弃 {before - len(unique)} 条（{', '.join(TITLE_EXCLUDE)} 等）")
 
     groups = {s: [] for s in SECTIONS}
     for it in unique:
