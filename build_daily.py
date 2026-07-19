@@ -84,8 +84,9 @@ _AI_PATTERNS = [r"(?<![a-z0-9])" + re.escape(k) + r"(?![a-z0-9])" for k in _AI_L
 
 
 # 标题排除：特定聚合/栏目类文章（整条丢弃，不进版块）。
-# 如 IT之家的「IT早报」每日汇总，内容杂、非单条新闻，故不收录。
-TITLE_EXCLUDE = ["IT早报"]
+# 如 IT之家的「IT早报」、爱范儿的「早报｜…」每日汇总，内容杂、非单条新闻，故不收录。
+# 关键词用「早报」即可同时覆盖上述两类早报栏目。
+TITLE_EXCLUDE = ["早报"]
 
 
 def is_ai_related(text):
