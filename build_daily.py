@@ -338,7 +338,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     --c1:#3a6b7e;  /* 模型发布/更新 · 青蓝 */
     --c2:#5a7d5a;  /* 产品发布/更新 · 苔绿 */
     --c3:#9c7b3f;  /* 行业动态 · 赭石 */
-    --c4:#4a6b7a;  /* 论文研究 · 岩灰蓝 */
+    --c4:#2f7a72;  /* 论文研究 · 青绿 */
     --c5:#6b7a5e;  /* 技巧与观点 · 橄榄 */
     --serif:"Songti SC","STSong","Noto Serif CJK SC","Source Han Serif SC","SimSun",Georgia,"Times New Roman",serif;
     --sans:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
