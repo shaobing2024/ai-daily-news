@@ -544,8 +544,8 @@ function fmtBeijing(iso, withDay){
   const dayDiff=Math.round((Date.UTC(Y,M-1,D)-Date.UTC(rY,rM-1,rD))/86400000);
   let prefix;
   if(dayDiff===0) prefix="今天";
-  else if(dayDiff===1) prefix="昨天";
-  else if(dayDiff===-1) prefix="明天";
+  else if(dayDiff===1) prefix="明天";
+  else if(dayDiff===-1) prefix="昨天";
   else prefix=(M+"月"+D+"日");
   return prefix+" "+h+":"+m;
 }
