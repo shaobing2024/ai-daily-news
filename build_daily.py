@@ -539,6 +539,11 @@ function fmtBeijing(iso, withDay){
   const bj = new Date(d.getTime() + 8*3600*1000);
   const Y=bj.getUTCFullYear(), M=bj.getUTCMonth()+1, D=bj.getUTCDate();
   const h=bj.getUTCHours(), m=String(bj.getUTCMinutes()).padStart(2,'0');
+  // 防源 pubDate 标到未来（如 InfoQ 把当天新闻统一标 18:00 北京），显示未来时间不合理
+  const nowBJ = new Date(Date.now() + 8*3600*1000);
+  if(bj.getTime() > nowBJ.getTime()){
+    return withDay===false ? (h+":"+m) : "刚刚";
+  }
   if(withDay===false) return h+":"+m;
   const p=(DATA.date||"").split("-");
   const rY=+p[0], rM=+p[1], rD=+p[2];
