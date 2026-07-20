@@ -1,9 +1,8 @@
-# 项目本地记忆与缓存（不进入仓库）
-.workbuddy/
-__pycache__/
-*.pyc
+# 本地构建产物（不参与部署，部署用 docs/index.html）
+ai_daily_dashboard.html
 
-# 抓取过程临时文件
-aihot_*.json
-_*.json
-_page*.json
+# 历史备份副本（保留在本地即可，勿入仓库）
+backup/
+
+# 临时校验文件
+_verify_*.html

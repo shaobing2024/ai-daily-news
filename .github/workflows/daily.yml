@@ -12,6 +12,11 @@ on:
 permissions:
   contents: write
 
+# 并发控制：避免 schedule 与 push 同时触发时两个 job 并行写同一文件导致 rebase 冲突静默跳过
+concurrency:
+  group: daily-news-build
+  cancel-in-progress: false
+
 jobs:
   build:
     # 防自触发死循环：仅 schedule / 手动 / 真人 push 时运行；bot 自身的提交推送不再触发

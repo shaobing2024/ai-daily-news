@@ -665,7 +665,10 @@ def esc_attr(s):
 def main():
     print("抓取中文科技媒体 RSS ...")
     data = build_data()
-    html = HTML_TEMPLATE.replace("__DATA__", json.dumps(data, ensure_ascii=False))
+    # 防 XSS：json.dumps 不会转义 '/'，若 RSS 标题含 </script> 会提前闭合脚本标签导致注入。
+    # 将 '</' 转成 '<\/' —— HTML 解析器看不到闭合标签，而 JS 解析字符串时 '\/' 仍等于 '/'，数据无损。
+    safe_data = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    html = HTML_TEMPLATE.replace("__DATA__", safe_data)
 
     og_title = HEAD_TAG + " · " + data["date"]
     og_desc = "中文 AI 资讯每日聚合：模型发布/更新、产品发布/更新、行业动态、论文研究、技巧与观点，来自量子位、IT之家、InfoQ、爱范儿等。"
