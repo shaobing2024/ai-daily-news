@@ -500,7 +500,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         </div>
         <div class="actions">
           <a class="btn primary" href="#main">查看最新一期</a>
-          <a class="btn" href="#sec-1">AI工具速报</a>
+          <a class="btn" href="#sec-1">产品发布/更新</a>
           <a class="btn" href="#footNote">RSS订阅</a>
           <a class="btn" href="https://xiaomaw.cn" target="_blank" rel="noopener">小马的主页</a>
         </div>
@@ -584,7 +584,7 @@ function renderHero(){
 
 function renderLead(){
   const box = document.getElementById("leadBox");
-  if(!DATA.lead){ box.parentNode.removeChild(box); return; }
+  if(!DATA.lead){ box.style.display = 'none'; return; }
   box.innerHTML = '<span class="lead-tag">今日导语</span>' + esc(DATA.lead);
 }
 
