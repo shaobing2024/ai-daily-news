@@ -363,10 +363,10 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .hero-inner{max-width:760px; margin:0 auto;}
   .masthead{display:flex; flex-direction:column; align-items:center;}
   .logo{
-    width:72px; height:72px; color:var(--ink);
-    margin-bottom:18px;
+    font-family:var(--serif); font-weight:700; font-size:30px; letter-spacing:.04em;
+    color:var(--ink); margin-bottom:14px; line-height:1; padding-bottom:12px;
+    border-bottom:2px solid var(--brand);
   }
-  .logo svg{width:100%; height:100%; display:block;}
   .kicker{
     font-size:12px; letter-spacing:.22em; text-transform:uppercase;
     color:var(--muted); margin:0 0 10px; font-weight:600;
@@ -395,26 +395,15 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .stat .lbl{font-size:12.5px; color:var(--muted); margin-top:7px; letter-spacing:.02em;}
   .stat.total .num{font-size:clamp(30px,4vw,42px); color:var(--brand);}
 
-  .actions{
-    display:flex; justify-content:center; flex-wrap:wrap;
-    gap:10px; margin-top:28px; width:100%;
+  .hero-meta{
+    margin:26px 0 0; font-size:13px; color:var(--muted); letter-spacing:.02em; line-height:1.7;
   }
-  .btn{
-    display:inline-flex; align-items:center; justify-content:center;
-    height:40px; padding:0 22px; border-radius:8px;
-    font-size:13.5px; font-weight:600; text-decoration:none;
-    color:var(--ink); background:var(--panel); border:1px solid var(--hair);
-    transition:.15s ease; cursor:pointer;
-  }
-  .btn:hover{border-color:var(--muted); background:#f8f9f6;}
-  .btn.primary{
-    background:var(--ink); color:var(--panel); border-color:var(--ink);
-  }
-  .btn.primary:hover{background:#333; border-color:#333;}
+  .hero-meta a{color:var(--brand); text-decoration:none;}
+  .hero-meta a:hover{text-decoration:underline;}
 
   .lead{
     background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--brand);
-    border-radius:10px; padding:16px 18px; margin:24px 0 0; box-shadow:var(--shadow);
+    border-radius:3px; padding:16px 18px; margin:24px 0 0; box-shadow:var(--shadow);
     font-size:14.5px; color:#3a4036; line-height:1.75;
   }
   .lead .lead-tag{display:block; font-size:11.5px; font-weight:700; color:var(--brand); letter-spacing:.1em; margin-bottom:6px; text-transform:uppercase;}
@@ -422,15 +411,14 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   /* —— 导航 —— */
   .nav{
     position:sticky; top:0; z-index:20; background:rgba(255,255,255,.92);
-    border:1px solid var(--line); border-radius:11px;
+    border:1px solid var(--line); border-radius:3px;
     display:flex; flex-wrap:wrap; gap:7px; padding:9px 11px; margin:24px 0 30px; box-shadow:var(--shadow);
   }
   .nav a{
     text-decoration:none; color:var(--ink); font-size:13px; font-weight:600;
-    padding:6px 12px; border-radius:8px; border:1px solid transparent; background:transparent; transition:.15s; white-space:nowrap;
+    padding:6px 12px; border-radius:3px; border:1px solid transparent; background:transparent; transition:.15s; white-space:nowrap;
   }
   .nav a:hover{background:#f3f4f0; border-color:var(--line);}
-  .nav a .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; vertical-align:middle;}
   .nav a .cnt{color:var(--muted); font-weight:700; margin-left:6px;}
 
   .section{margin-bottom:42px; scroll-margin-top:74px;}
@@ -441,20 +429,20 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;}
   .card{
-    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
-    box-shadow:var(--shadow); position:relative; display:flex; flex-direction:column; transition:.18s ease; border-top:2px solid var(--accent,#ccc);
+    background:var(--panel); border:1px solid var(--line); border-radius:3px; padding:18px 18px 16px;
+    box-shadow:var(--shadow); position:relative; display:flex; flex-direction:column; transition:.15s ease; border-top:2px solid var(--accent,#ccc);
   }
-  .card:hover{transform:translateY(-2px); box-shadow:0 8px 26px rgba(20,28,24,.09); border-color:var(--hair);}
+  .card:hover{background:#fcfcf9; border-color:var(--hair);}
   .card .top{display:flex; align-items:center; gap:10px; margin-bottom:11px;}
   .badge{
-    flex:0 0 auto; width:28px; height:28px; border-radius:7px; background:var(--accent,#2f6f8f);
+    flex:0 0 auto; width:28px; height:28px; border-radius:3px; background:var(--accent,#2f6f8f);
     color:#fff; font-weight:700; font-size:13px; font-family:var(--serif); display:flex; align-items:center; justify-content:center;
   }
   .chip{
     margin-left:auto; font-size:11.5px; font-weight:600; color:var(--accent,#2f6f8f);
     background:color-mix(in srgb,var(--accent,#2f6f8f) 9%,#fff);
     border:1px solid color-mix(in srgb,var(--accent,#2f6f8f) 22%,#fff);
-    padding:3px 10px; border-radius:7px; max-width:62%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    padding:3px 10px; border-radius:3px; max-width:62%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .card h3{margin:2px 0 9px; font-size:15.5px; font-weight:700; line-height:1.5;}
   .card h3 a{color:inherit; text-decoration:none;}
@@ -483,12 +471,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <header class="hero" id="top">
     <div class="hero-inner">
       <div class="masthead">
-        <div class="logo" aria-label="小马AI 每日新闻">
-          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="32" cy="32" r="30"/>
-            <path d="M22 44V24l10 12 10-12v20"/>
-          </svg>
-        </div>
+        <div class="logo" aria-label="小马AI">小马AI</div>
         <p class="kicker">AI 每日新闻 · 聚合</p>
         <h1>小马AI 每日新闻</h1>
         <p class="tagline">每 6 小时自动更新的 AI 行业快讯</p>
@@ -498,12 +481,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
           <div class="stat"><div class="num">6h</div><div class="lbl">更新频率</div></div>
           <div class="stat"><div class="num" id="statSec">5</div><div class="lbl">内容分类</div></div>
         </div>
-        <div class="actions">
-          <a class="btn primary" href="#main">查看最新一期</a>
-          <a class="btn" href="#sec-1">产品发布/更新</a>
-          <a class="btn" href="#footNote">RSS订阅</a>
-          <a class="btn" href="https://xiaomaw.cn" target="_blank" rel="noopener">小马的主页</a>
-        </div>
+        <p class="hero-meta">数据来源：量子位 · IT之家 · InfoQ中文 · 爱范儿 · 开源中国　·　<a href="https://xiaomaw.cn" target="_blank" rel="noopener">小马的主页</a></p>
       </div>
     </div>
   </header>
@@ -590,9 +568,9 @@ function renderLead(){
 
 function renderNav(){
   const nav = document.getElementById("nav");
-  let html = '<a href="#top"><span class="dot" style="background:#94a3b8"></span>顶部</a>';
+  let html = '<a href="#top">顶部</a>';
   DATA.sections.forEach(function(s,i){
-    html += '<a href="#sec-' + i + '"><span class="dot" style="background:' + accentVar(i) + '"></span>'
+    html += '<a href="#sec-' + i + '">'
       + s.label + '<span class="cnt">' + s.items.length + '</span></a>';
   });
   nav.innerHTML = html;
