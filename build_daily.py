@@ -68,7 +68,7 @@ KW_AI = [
     # 通用 / 概念
     "ai", "aigc", "agi", "人工智能", "生成式", "生成式ai", "智能体", "agent", "agentic",
     "大模型", "llm", "多模态", "基座模型", "推理模型", "开源模型", "预训练", "微调",
-    "对齐", "rlhf", "涌现", "蒸馏", "参数", "transformer", "扩散模型", "提示词", "prompt",
+    "对齐", "rlhf", "涌现", "蒸馏", "transformer", "扩散模型", "提示词", "prompt",
     "rag", "向量", "具身", "算力", "机器学习", "深度学习", "神经网络",
     # 模型 / 产品名
     "gpt", "chatgpt", "claude", "gemini", "llama", "mistral", "qwen", "deepseek",
@@ -76,11 +76,19 @@ KW_AI = [
     "midjourney", "sora", "stable diffusion", "文生图", "文生视频", "数字人",
     # 公司与芯片
     "openai", "anthropic", "deepmind", "xai", "英伟达", "nvidia", "昇腾", "h100", "h200", "a100",
-    "百度智能云", "阿里通义", "腾讯混元", "月之暗面",
+    "百度智能云", "阿里通义", "腾讯混元", "月之暗面", "商汤", "寒武纪", "MiniMax", "讯飞星火", "阶跃星辰",
 ]
 _AI_LATIN = [k for k in KW_AI if re.fullmatch(r"[A-Za-z0-9.+]+", k)]
 _AI_CJK = [k for k in KW_AI if k not in _AI_LATIN]
 _AI_PATTERNS = [r"(?<![a-z0-9])" + re.escape(k) + r"(?![a-z0-9])" for k in _AI_LATIN]
+
+# IT之家 等综合科技站的「强信号」白名单：KW_AI 去掉泛词后的剩余项（自动同步）。
+# 用作「标题未命中 AI 词、但摘要命中」的兜底——避免硬件 / 基础设施文仅靠摘要
+# 提一句 人工智能 / 算力 / 裸 ai / 英伟达 / agent 就被误放行（如 5G 基站、游戏 GPU 配置、锂电池运输）。
+# _AI_LOOSE 为需排除的泛词：人工智能 / 算力（常作基础设施稿总结套话）、裸 ai / aigc / agi
+# （摘要顺带一提）、英伟达 / nvidia（游戏 GPU 也提）、agent / agentic（安全 / 销售等场景也用）。
+_AI_LOOSE = {"ai", "aigc", "agi", "人工智能", "算力", "英伟达", "nvidia", "agent", "agentic"}
+_AI_VERY_STRONG = {k for k in KW_AI if k not in _AI_LOOSE}
 
 
 # 标题排除：特定聚合/栏目类文章（整条丢弃，不进版块）。
@@ -89,8 +97,8 @@ _AI_PATTERNS = [r"(?<![a-z0-9])" + re.escape(k) + r"(?![a-z0-9])" for k in _AI_L
 TITLE_EXCLUDE = ["早报"]
 
 
-def is_ai_related(text):
-    t = (text or "").lower()
+def _matches_ai(t):
+    """标题或摘要命中任一 AI 词即 True（原 is_ai_related 的判定逻辑）。"""
     for k in _AI_CJK:
         if k in t:
             return True
@@ -101,6 +109,28 @@ def is_ai_related(text):
     if "agent" in t and not any(b in t for b in ("management", "engagement", "embed", "percentage")):
         return True
     return False
+
+
+def is_ai_related(title, summary="", source=None):
+    """AI 相关性判定。
+    - 偏 AI 的 4 个源：标题或摘要命中任一 AI 词即放行。
+    - IT之家（综合科技站，噪音大）：标题未命中时，摘要必须命中「专有名词」级关键词
+      （具体模型 / 公司名，如 gpt / 智谱 / openai / 月之暗面），排除 人工智能 / 算力 /
+      裸 ai / 英伟达 等泛词，避免硬件 / 基础设施文仅靠摘要提一句 AI 就被误收。
+    """
+    t_title = (title or "").lower()
+    full = t_title
+    if summary:
+        full = t_title + " " + (summary or "").lower()
+    if not _matches_ai(full):
+        return False
+    # 标题已命中 → 直接放行（无论哪个源）
+    if _matches_ai(t_title):
+        return True
+    # 标题未命中、仅靠摘要：仅 IT之家 需更强信号，且只允许「具体模型 / 公司专有名词」
+    if source == "IT之家":
+        return any(k in full for k in _AI_VERY_STRONG)
+    return True
 
 
 # ----------------------------------------------------------------------------
@@ -267,7 +297,7 @@ def build_data():
 
     # AI 相关性过滤：与 AI 无关的整条丢弃（不进任何版块）
     before = len(unique)
-    unique = [it for it in unique if is_ai_related(it["title"] + " " + (it["summary"] or ""))]
+    unique = [it for it in unique if is_ai_related(it["title"], it["summary"] or "", it["source"])]
     if before - len(unique):
         print(f"  AI 过滤: 丢弃 {before - len(unique)} 条非 AI 相关")
 
@@ -390,9 +420,9 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     gap:14px 42px; margin-top:28px; padding-top:22px;
     border-top:1px solid var(--hair); width:100%;
   }
-  .stat{background:none; border:none; padding:0; min-width:auto; flex:0 0 auto; text-align:center;}
+  .stat{background:none; border:none; padding:0; min-width:auto; flex:0 0 auto; text-align:left; display:inline-flex; align-items:baseline; gap:6px;}
   .stat .num{font-family:var(--serif); font-size:clamp(26px,3.4vw,34px); font-weight:700; line-height:1; color:var(--ink);}
-  .stat .lbl{font-size:12.5px; color:var(--muted); margin-top:7px; letter-spacing:.02em;}
+  .stat .lbl{font-size:12.5px; color:var(--muted); letter-spacing:.02em; line-height:1; transform:translateY(-1px);}
   .stat.total .num{font-size:clamp(30px,4vw,42px); color:var(--brand);}
 
   .hero-meta{
