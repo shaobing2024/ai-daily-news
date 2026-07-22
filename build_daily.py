@@ -359,7 +359,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     --bg:#f4f5f2;
     --panel:#ffffff;
     --ink:#1b1d1f;
-    --muted:#737670;
+    --muted:#6b6f67;
     --line:#e6e7e2;
     --hair:#d8d9d3;
     --brand:#2f6f8f;
@@ -367,13 +367,17 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     /* 低饱和、无红无紫的编辑式配色 */
     --c1:#3a6b7e;  /* 模型发布/更新 · 青蓝 */
     --c2:#5a7d5a;  /* 产品发布/更新 · 苔绿 */
-    --c3:#9c7b3f;  /* 行业动态 · 赭石 */
+    --c3:#8a6a30;  /* 行业动态 · 赭石（调深以达 AA 对比度） */
     --c4:#2f7a72;  /* 论文研究 · 青绿 */
     --c5:#6b7a5e;  /* 技巧与观点 · 橄榄 */
     --serif:"Songti SC","STSong","Noto Serif CJK SC","Source Han Serif SC","SimSun",Georgia,"Times New Roman",serif;
     --sans:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
   *{box-sizing:border-box;}
+  :focus-visible{outline:2px solid var(--brand); outline-offset:2px; border-radius:4px;}
+  .nav a:focus-visible, .card h3 a:focus-visible, .card .link:focus-visible{outline:2px solid var(--brand); outline-offset:2px;}
+  .skip-link{position:absolute; left:-9999px; top:0; z-index:60; background:var(--ink); color:var(--bg); padding:.6rem 1rem; border-radius:0 0 .5rem 0; font-weight:600; text-decoration:none;}
+  .skip-link:focus{left:0;}
   html{scroll-behavior:smooth;}
   body{
     margin:0; background:var(--bg); color:var(--ink);
@@ -412,7 +416,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     margin:8px 0 0; font-size:12.5px; color:var(--muted); letter-spacing:.02em;
   }
   .badge-fallback{display:inline-block; margin-left:8px; font-size:11px; font-weight:700;
-    background:#fdf3e7; color:#9c7b3f; border:1px solid #ecd9b8; padding:2px 8px; border-radius:999px; vertical-align:middle;}
+    background:#fdf3e7; color:#8a6a30; border:1px solid #ecd9b8; padding:2px 8px; border-radius:999px; vertical-align:middle;}
 
   /* 报头统计条：居中、无彩色块 */
   .stat-row{
@@ -446,7 +450,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   }
   .nav a{
     text-decoration:none; color:var(--ink); font-size:13px; font-weight:600;
-    padding:6px 12px; border-radius:3px; border:1px solid transparent; background:transparent; transition:.15s; white-space:nowrap;
+    padding:10px 14px; min-height:44px; display:inline-flex; align-items:center;
+    border-radius:3px; border:1px solid transparent; background:transparent; transition:.15s; white-space:nowrap;
   }
   .nav a:hover{background:#f3f4f0; border-color:var(--line);}
   .nav a .cnt{color:var(--muted); font-weight:700; margin-left:6px;}
@@ -495,9 +500,14 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .grid{grid-template-columns:1fr;}
     .stat{flex:1 1 40%;}
   }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *,*::before,*::after{animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important;}
+  }
 </style>
 </head>
 <body>
+  <a href="#main" class="skip-link">跳到主内容</a>
   <header class="hero" id="top">
     <div class="hero-inner">
       <div class="masthead">
@@ -511,7 +521,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
           <div class="stat"><div class="num">6h</div><div class="lbl">更新频率</div></div>
           <div class="stat"><div class="num" id="statSec">5</div><div class="lbl">内容分类</div></div>
         </div>
-        <p class="hero-meta">数据来源：量子位 · IT之家 · InfoQ中文 · 爱范儿 · 开源中国　·　<a href="https://xiaomaw.cn" target="_blank" rel="noopener">小马的主页</a></p>
+        <p class="hero-meta">数据来源：量子位 · IT之家 · InfoQ中文 · 爱范儿 · 开源中国　·　<a href="https://xiaomaw.cn" target="_blank" rel="noopener noreferrer">小马的主页</a></p>
       </div>
     </div>
   </header>
