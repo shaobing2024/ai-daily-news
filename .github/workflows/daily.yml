@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
   schedule:
-    # 每 6 小时一次（贴近「实时」感）：UTC 0/6/12/18 = 北京时间 8/14/20/2 点
-    - cron: "0 */6 * * *"
+    # 每日一次，北京时间 07:00（= UTC 前一晚 23:00），名副其实的「每日晨报」
+    - cron: "0 23 * * *"
   workflow_dispatch: {}   # 允许在 Actions 页面手动触发
 
 # 允许工作流把生成的 HTML 提交回仓库
