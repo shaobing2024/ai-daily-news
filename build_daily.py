@@ -356,14 +356,17 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23ffffff'/><path d='M16 5c6.075 0 11 4.925 11 11s-4.925 11-11 11S5 22.075 5 16 9.925 5 16 5z' fill='none' stroke='%231b1d1f' stroke-width='2'/><path d='M9 22V11l7 8 7-8v11' fill='none' stroke='%231b1d1f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <style>
   :root{
-    --bg:#f4f5f2;
+    --bg:#faf8f6;
     --panel:#ffffff;
-    --ink:#1b1d1f;
-    --muted:#6b6f67;
-    --line:#e6e7e2;
-    --hair:#d8d9d3;
-    --brand:#2f6f8f;
-    --shadow:0 1px 2px rgba(20,28,24,.04),0 8px 24px rgba(20,28,24,.05);
+    --ink:#211a15;
+    --muted:#7d746a;
+    --line:#ede8e1;
+    --hair:#ddd5c9;
+    --brand:#c2410c;
+    --brand-strong:#9a3412;
+    --brand-soft:#fff4ec;
+    --shadow:0 1px 2px rgba(60,38,20,.05),0 10px 30px rgba(60,38,20,.06);
+    --shadow-lg:0 2px 4px rgba(60,38,20,.06),0 18px 42px rgba(60,38,20,.12);
     /* 低饱和、无红无紫的编辑式配色 */
     --c1:#3a6b7e;  /* 模型发布/更新 · 青蓝 */
     --c2:#5a7d5a;  /* 产品发布/更新 · 苔绿 */
@@ -374,6 +377,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     --sans:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
   *{box-sizing:border-box;}
+  ::selection{background:#ffedd5;}
   :focus-visible{outline:2px solid var(--brand); outline-offset:2px; border-radius:4px;}
   .nav a:focus-visible, .card h3 a:focus-visible, .card .link:focus-visible{outline:2px solid var(--brand); outline-offset:2px;}
   .skip-link{position:absolute; left:-9999px; top:0; z-index:60; background:var(--ink); color:var(--bg); padding:.6rem 1rem; border-radius:0 0 .5rem 0; font-weight:600; text-decoration:none;}
@@ -381,17 +385,18 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   html{scroll-behavior:smooth;}
   body{
     margin:0; background:var(--bg); color:var(--ink);
-    font-family:var(--sans); line-height:1.65; -webkit-font-smoothing:antialiased;
+    font-family:var(--sans); line-height:1.7; -webkit-font-smoothing:antialiased;
     text-rendering:optimizeLegibility;
   }
-  .wrap{max-width:1120px; margin:0 auto; padding:0 20px 72px;}
+  .wrap{max-width:1140px; margin:0 auto; padding:0 20px 76px;}
 
   /* —— 报头 / Masthead —— */
   .hero{
-    background:var(--panel); color:var(--ink);
+    background:linear-gradient(180deg,#ffffff 0%,#fff8f1 78%,#fdf1e3 100%);
+    color:var(--ink);
     border-bottom:1px solid var(--line);
-    border-top:3px solid var(--brand);
-    padding:52px 20px 40px; margin-bottom:0;
+    border-top:4px solid var(--brand);
+    padding:56px 20px 44px; margin-bottom:0;
     text-align:center;
   }
   .hero-inner{max-width:760px; margin:0 auto;}
@@ -403,14 +408,14 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   }
   .kicker{
     font-size:12px; letter-spacing:.22em; text-transform:uppercase;
-    color:var(--muted); margin:0 0 10px; font-weight:600;
+    color:var(--brand); margin:0 0 10px; font-weight:700;
   }
   .hero h1{
     margin:0; font-family:var(--serif); font-weight:700;
-    font-size:clamp(30px,4.8vw,44px); line-height:1.1; letter-spacing:.01em;
+    font-size:clamp(32px,4.8vw,46px); line-height:1.12; letter-spacing:.01em;
   }
   .tagline{
-    margin:12px 0 0; color:var(--muted); font-size:14.5px; font-weight:400;
+    margin:12px 0 0; color:var(--muted); font-size:15px; font-weight:400;
   }
   .hero-date{
     margin:8px 0 0; font-size:12.5px; color:var(--muted); letter-spacing:.02em;
@@ -436,73 +441,76 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .hero-meta a:hover{text-decoration:underline;}
 
   .lead{
-    background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--brand);
-    border-radius:3px; padding:16px 18px; margin:24px 0 0; box-shadow:var(--shadow);
-    font-size:14.5px; color:#3a4036; line-height:1.75;
+    background:linear-gradient(180deg,#ffffff,#fffaf5); border:1px solid var(--line); border-left:4px solid var(--brand);
+    border-radius:14px; padding:18px 20px; margin:24px 0 0; box-shadow:var(--shadow);
+    font-size:14.5px; color:#453b31; line-height:1.75;
   }
   .lead .lead-tag{display:block; font-size:11.5px; font-weight:700; color:var(--brand); letter-spacing:.1em; margin-bottom:6px; text-transform:uppercase;}
 
   /* —— 导航 —— */
   .nav{
-    position:sticky; top:0; z-index:20; background:rgba(255,255,255,.92);
-    border:1px solid var(--line); border-radius:3px;
+    position:sticky; top:12px; z-index:20; background:rgba(255,255,255,.88);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+    border:1px solid var(--line); border-radius:16px;
     display:flex; flex-wrap:wrap; gap:7px; padding:9px 11px; margin:24px 0 30px; box-shadow:var(--shadow);
   }
   .nav a{
     text-decoration:none; color:var(--ink); font-size:13px; font-weight:600;
-    padding:10px 14px; min-height:44px; display:inline-flex; align-items:center;
-    border-radius:3px; border:1px solid transparent; background:transparent; transition:.15s; white-space:nowrap;
+    padding:10px 15px; min-height:44px; display:inline-flex; align-items:center;
+    border-radius:999px; border:1px solid transparent; background:transparent; transition:.15s; white-space:nowrap;
   }
-  .nav a:hover{background:#f3f4f0; border-color:var(--line);}
+  .nav a:hover{background:var(--brand-soft); border-color:#f3ddcb; color:var(--brand-strong);}
   .nav a .cnt{color:var(--muted); font-weight:700; margin-left:6px;}
 
-  .section{margin-bottom:42px; scroll-margin-top:74px;}
-  .section-head{display:flex; align-items:baseline; gap:12px; margin:0 0 18px; padding-bottom:11px; border-bottom:1px solid var(--ink);}
-  .section-head .bar{width:4px; height:22px; border-radius:2px; background:var(--accent);}
+  .section{margin-bottom:44px; scroll-margin-top:84px;}
+  .section-head{display:flex; align-items:center; gap:12px; margin:0 0 18px; padding-bottom:11px; border-bottom:2px solid var(--ink);}
+  .section-head .bar{width:5px; height:24px; border-radius:3px; background:var(--accent);}
   .section-head h2{margin:0; font-family:var(--serif); font-size:clamp(19px,2.4vw,23px); font-weight:700; letter-spacing:.01em;}
   .section-head .count{margin-left:auto; color:var(--muted); font-size:13.5px; font-weight:600;}
 
-  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px;}
   .card{
-    background:var(--panel); border:1px solid var(--line); border-radius:3px; padding:18px 18px 16px;
-    box-shadow:var(--shadow); position:relative; display:flex; flex-direction:column; transition:.15s ease; border-top:2px solid var(--accent,#ccc);
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px 20px 17px;
+    box-shadow:var(--shadow); position:relative; display:flex; flex-direction:column; transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; border-top:3px solid var(--accent,#ccc);
   }
-  .card:hover{background:#fcfcf9; border-color:var(--hair);}
+  .card:hover{transform:translateY(-3px); box-shadow:var(--shadow-lg); border-color:var(--hair);}
   .card .top{display:flex; align-items:center; gap:10px; margin-bottom:11px;}
   .badge{
-    flex:0 0 auto; width:28px; height:28px; border-radius:3px; background:var(--accent,#2f6f8f);
+    flex:0 0 auto; width:30px; height:30px; border-radius:10px; background:var(--accent,#c2410c);
     color:#fff; font-weight:700; font-size:13px; font-family:var(--serif); display:flex; align-items:center; justify-content:center;
   }
   .chip{
-    margin-left:auto; font-size:11.5px; font-weight:600; color:var(--accent,#2f6f8f);
-    background:color-mix(in srgb,var(--accent,#2f6f8f) 9%,#fff);
-    border:1px solid color-mix(in srgb,var(--accent,#2f6f8f) 22%,#fff);
-    padding:3px 10px; border-radius:3px; max-width:62%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    margin-left:auto; font-size:11.5px; font-weight:600; color:var(--accent,#c2410c);
+    background:color-mix(in srgb,var(--accent,#c2410c) 9%,#fff);
+    border:1px solid color-mix(in srgb,var(--accent,#c2410c) 22%,#fff);
+    padding:3px 10px; border-radius:999px; max-width:62%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  .card h3{margin:2px 0 9px; font-size:15.5px; font-weight:700; line-height:1.5;}
+  .card h3{margin:2px 0 9px; font-size:16px; font-weight:700; line-height:1.5;}
   .card h3 a{color:inherit; text-decoration:none;}
-  .card h3 a:hover{color:var(--accent,#2f6f8f); text-decoration:underline;}
-  .card .summary{font-size:13px; color:#52584e; margin:0 0 14px; flex:1 1 auto; line-height:1.65;}
-  .card .foot{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:auto; padding-top:11px; border-top:1px solid var(--line);}
+  .card h3 a:hover{color:var(--accent,#c2410c); text-decoration:underline;}
+  .card .summary{font-size:13.5px; color:#5b5348; margin:0 0 14px; flex:1 1 auto; line-height:1.65;}
+  .card .foot{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:auto; padding-top:12px; border-top:1px solid var(--line);}
   .card .time{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:5px;}
   .card .time svg{flex:0 0 auto; opacity:.6;}
-  .card .link{font-size:13px; font-weight:700; color:var(--accent,#2f6f8f); text-decoration:none; display:inline-flex; align-items:center; gap:4px;}
+  .card .link{font-size:13px; font-weight:700; color:var(--accent,#c2410c); text-decoration:none; display:inline-flex; align-items:center; gap:4px;}
   .card .link:hover{text-decoration:underline;}
 
-  .foot-note{text-align:center; color:var(--muted); font-size:13px; margin-top:34px; padding-top:22px; border-top:1px solid var(--line); line-height:1.85;}
+  .foot-note{text-align:center; color:var(--muted); font-size:13px; margin-top:36px; padding-top:22px; border-top:1px solid var(--line); line-height:1.85;}
   .foot-note a{color:var(--brand); text-decoration:none;}
   .foot-note a:hover{text-decoration:underline;}
 
   @media (max-width:560px){
-    .hero{padding:34px 18px 24px;}
-    .hero h1{font-size:26px;}
+    .hero{padding:36px 18px 26px;}
+    .hero h1{font-size:27px;}
     .wrap{padding:0 14px 56px;}
     .grid{grid-template-columns:1fr;}
     .stat{flex:1 1 40%;}
+    .nav{top:8px;}
   }
   @media (prefers-reduced-motion: reduce){
     html{scroll-behavior:auto;}
     *,*::before,*::after{animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important;}
+    .card:hover{transform:none;}
   }
 </style>
 </head>
